@@ -114,5 +114,9 @@ The API is fully documented using Swagger. Once the backend is running, visit:
 4.  **Multi-tenancy**: Support for organizational workspaces.
 
 ---
+## Logging
+
+Basic request logging implemented using Express middleware.
+Sample logs available in /backend/logs/server.log
 
 *This project was developed as part of a Backend Engineering Intern Assignment.*
