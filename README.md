@@ -1,122 +1,105 @@
-# AccessCore | Backend Intern Assignment
+# AccessCore — Role-Based Task Management API
 
-Welcome to the **AccessCore** submission. This project is a robust, enterprise-ready task management system designed to demonstrate advanced proficiency in Node.js, Express, PostgreSQL, and scalable architectural patterns.
+AccessCore is a full-stack task-management application built to demonstrate REST API development, JWT authentication, role-based access control, and PostgreSQL integration. It includes a React/Vite frontend and an Express backend with Swagger API documentation.
 
----
+> **Demo status:** A verified public deployment URL has not been confirmed yet. Use the local setup below to run the project.
 
-## 🚀 Project Overview
+## Features
 
-AccessCore is a secure platform that enables users to manage mission-critical tasks with role-based accessibility. It features a high-end React frontend and a standardized Express API following the **RESTful** design philosophy.
+- Task creation, retrieval, updating, and deletion.
+- JWT-based registration and login.
+- User and administrator roles with protected admin functionality.
+- Task ownership checks on user-facing task operations.
+- PostgreSQL persistence with parameterized queries.
+- Centralized API error handling and request logging.
+- Interactive API documentation through Swagger UI.
 
-### Key Highlights:
-- **Full CRUD**: Comprehensive task management with ownership enforcement.
-- **RBAC**: Multi-role system (User/Admin) for hierarchical data access.
-- **Premium UX**: Framer-motion driven UI with an obsidian-glass design system.
-- **Standardized API**: Consistent JSON response formats and global error handling.
+## Technology Stack
 
----
+| Area | Technology |
+|---|---|
+| Frontend | React, Vite, Framer Motion, Lucide Icons |
+| Backend | Node.js, Express.js |
+| Database | PostgreSQL |
+| Authentication | JWT, bcryptjs |
+| API documentation | Swagger / OpenAPI |
+| Security middleware | Helmet, CORS |
 
-## 🛠️ Tech Stack
+## Prerequisites
 
-| Layer | Technology |
-| :--- | :--- |
-| **Backend** | Node.js, Express.js |
-| **Database** | PostgreSQL |
-| **Authentication** | JWT (JSON Web Tokens), Bcrypt.js |
-| **Documentation** | Swagger (OpenAPI 3.0) |
-| **Frontend** | React, Vite, Framer Motion, Lucide Icons |
-| **Security** | Helmet, CORS, Parameterized Queries |
+- Node.js and npm
+- PostgreSQL
+- Git
 
----
+## Local Setup
 
-## ⚙️ Installation & Setup
+### 1. Clone the repository
 
-### 1. Prerequisites
-- Node.js (v16+)
-- PostgreSQL (Local or Cloud instance)
-
-### 2. Database Initialization
-Create a new database in PostgreSQL and run the schema:
 ```bash
-cd backend
-# Database configuration is handled via .env
-node src/models/run-schema.js
+git clone https://github.com/suresh294/accesscore-role-based-api.git
+cd accesscore-role-based-api
 ```
 
-### 3. Backend Setup
+### 2. Configure PostgreSQL and the backend
+
+Create a PostgreSQL database, then create a `backend/.env` file using the environment variable names expected by the backend. The README's configuration reference is:
+
+| Variable | Purpose |
+|---|---|
+| `PORT` | Backend port (commonly `5000`) |
+| `DB_USER` | PostgreSQL username |
+| `DB_PASSWORD` | PostgreSQL password |
+| `DB_NAME` | Database name |
+| `JWT_SECRET` | Secret used to sign tokens |
+| `JWT_EXPIRE` | Token lifetime |
+
+Use a unique, randomly generated JWT secret and keep `.env` files out of version control. Never paste production credentials into issues, screenshots, or documentation.
+
+Initialize the schema using the project's script:
+
 ```bash
 cd backend
 npm install
+node src/models/run-schema.js
 npm start
 ```
 
-### 4. Frontend Setup
+### 3. Start the frontend
+
+Open another terminal from the repository root:
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
----
+Use the local URL printed by Vite. When the backend is running, the Swagger UI is expected at:
 
-## 🔑 Environment Variables
+```text
+http://localhost:5000/api-docs
+```
 
-The backend requires a `.env` file in the `/backend` directory:
+If your local database or port configuration differs, update the backend environment accordingly.
 
-| Variable | Description | Example |
-| :--- | :--- | :--- |
-| `PORT` | Server Port | `5000` |
-| `DB_USER` | Postgres Username | `postgres` |
-| `DB_PASSWORD` | Postgres Password | `****` |
-| `DB_NAME` | Database Name | `accesscore` |
-| `JWT_SECRET` | Secret for Signing | `your_ultra_secret_key` |
-| `JWT_EXPIRE` | Token Expiry | `30d` |
+## API Overview
 
----
+| Method | Endpoint | Purpose | Access |
+|---|---|---|---|
+| POST | `/api/v1/auth/register` | Register an account | Public |
+| POST | `/api/v1/auth/login` | Sign in and receive a JWT | Public |
+| GET | `/api/v1/tasks` | List tasks available to the signed-in user | Authenticated |
+| POST | `/api/v1/tasks` | Create a task | Authenticated |
+| PUT | `/api/v1/tasks/:id` | Update a task | Authenticated / ownership checked |
+| DELETE | `/api/v1/tasks/:id` | Delete a task | Authenticated / ownership checked |
+| GET | `/api/v1/admin/stats` | Retrieve administrator statistics | Admin |
 
-## 📑 API Endpoints & Documentation
+The running Swagger UI is the best place to confirm request schemas and response details for the current code.
 
-### Interactive Docs
-The API is fully documented using Swagger. Once the backend is running, visit:
-👉 **[http://localhost:5000/api-docs](http://localhost:5000/api-docs)**
+## Current Scope and Next Steps
 
-### Endpoint Summary (v1)
+The repository is a portfolio project, not a claim of production readiness. Before using it with real users, review authentication and authorization paths, configure secure deployment secrets, add automated unit/integration tests, and run dependency/security checks. Future enhancements could include real-time updates and file attachments; these are not presented as existing features.
 
-| Method | Endpoint | Description | Auth |
-| :--- | :--- | :--- | :--- |
-| **POST** | `/api/v1/auth/register` | Create new account | Public |
-| **POST** | `/api/v1/auth/login` | Obtain JWT token | Public |
-| **GET** | `/api/v1/tasks` | Fetch user-specific tasks | JWT |
-| **POST** | `/api/v1/tasks` | Deploy new objective | JWT |
-| **PUT** | `/api/v1/tasks/:id` | Update task details | JWT + Owner |
-| **DELETE** | `/api/v1/tasks/:id` | Purge task | JWT + Owner |
-| **GET** | `/api/v1/admin/stats` | Global analytics | JWT + Admin |
+## Repository
 
----
-
-## 🛡️ Security & Scalability
-
-- **Stateless Auth**: JWT-based authentication ensures the backend can scale horizontally without session synchronization.
-- **Injection Protection**: Direct use of parameterized SQL queries to prevent automated and manual injection attacks.
-- **Password Safety**: Industry-standard salting and hashing using `Bcrypt`.
-- **RBAC Middleware**: Permission checks are decoupled from logic, allowing for easy expansion of roles (e.g., Manager, Auditor).
-- **Scalability Path**:
-  - **Redis Caching**: Ready for integration to cache frequent task lookups.
-  - **Docker Ready**: Structured for easy containerization with environment isolation.
-
----
-
-## 🔮 Future Improvements
-
-1.  **Unit & Integration Testing**: Implementing Jest/Supertest for 100% logic coverage.
-2.  **WebSockets**: Real-time task updates across team members.
-3.  **File Attachments**: AWS S3 integration for task-related documentation.
-4.  **Multi-tenancy**: Support for organizational workspaces.
-
----
-## Logging
-
-Basic request logging implemented using Express middleware.
-Sample logs available in /backend/logs/server.log
-
-*This project was developed as part of a Backend Engineering Intern Assignment.*
+[View AccessCore on GitHub](https://github.com/suresh294/accesscore-role-based-api)
