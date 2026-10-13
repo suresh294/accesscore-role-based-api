@@ -100,7 +100,7 @@ The running Swagger UI is the best place to confirm request schemas and response
 
 ## Current Scope and Next Steps
 
-The repository is a portfolio project, not a claim of production readiness. Before using it with real users, review authentication and authorization paths, configure secure deployment secrets, add automated unit/integration tests, and run dependency/security checks. Future enhancements could include real-time updates and file attachments; these are not presented as existing features.
+The repository is a portfolio project, not a claim of production readiness. Before using it with real users, review authentication and authorization paths, configure secure deployment secrets, add automated unit/integration tests, and run dependency/security checks. Before deploying publicly, review and resolve the dependency advisories reported by CI. The current audit still flags high-severity issues in frontend dependencies and development tooling; some fixes require major-version upgrades and should be tested separately. Future enhancements could include real-time updates and file attachments; these are not presented as existing features.
 
 ## Repository
 
