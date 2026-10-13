@@ -1,5 +1,7 @@
 # AccessCore — Role-Based Task Management API
 
+[![CI](https://github.com/suresh294/accesscore-role-based-api/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/suresh294/accesscore-role-based-api/actions/workflows/ci.yml)
+
 AccessCore is a full-stack task-management application built to demonstrate REST API development, JWT authentication, role-based access control, and PostgreSQL integration. It includes a React/Vite frontend and an Express backend with Swagger API documentation.
 
 > **Demo status:** A verified public deployment URL has not been confirmed yet. Use the local setup below to run the project.
