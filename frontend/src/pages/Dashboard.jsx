@@ -1,60 +1,122 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import API from '../services/api';
 import TaskItem from '../components/TaskItem';
-import { MeshBg } from '../components/UI';
+import TeamMembers from './TeamMembers';
+import SettingsPage from './Settings';
+import { Badge, Button, Card, MeshBg } from '../components/UI';
 import {
-    LogOut, Plus, CheckCircle2, LayoutDashboard, Loader2,
-    AlertCircle, Users, Settings, Clock, ListTodo
+    AlertCircle, BarChart3, CheckCircle2, ChevronRight, Clock, LayoutDashboard,
+    ListTodo, LogOut, Menu, Moon, PanelLeftClose, PanelLeftOpen, Plus, RefreshCw,
+    Settings as SettingsIcon, Shield, Sun, Users, X,
 } from 'lucide-react';
 
+const getStoredTheme = () => localStorage.getItem('accesscore-theme') || 'dark';
+
 const Dashboard = () => {
+    const { user, logout, updateUser } = useAuth();
+    const [activeTab, setActiveTab] = useState('dashboard');
     const [tasks, setTasks] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [tasksLoading, setTasksLoading] = useState(true);
+    const [stats, setStats] = useState(null);
+    const [statsLoading, setStatsLoading] = useState(false);
+    const [error, setError] = useState('');
     const [newTitle, setNewTitle] = useState('');
     const [newDesc, setNewDesc] = useState('');
     const [isCreating, setIsCreating] = useState(false);
-    const [error, setError] = useState('');
-    const [activeTab, setActiveTab] = useState('tasks');
-
-    const { user, logout } = useAuth();
-
-    useEffect(() => { fetchTasks(); }, []);
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [mobileNavOpen, setMobileNavOpen] = useState(false);
+    const [theme, setTheme] = useState(getStoredTheme);
 
     const fetchTasks = async () => {
+        setTasksLoading(true);
         try {
-            const res = await API.get('/tasks');
-            setTasks(res.data.data || []);
-            setLoading(false);
+            const response = await API.get('/tasks');
+            setTasks(response.data.data || []);
         } catch {
-            setError('Failed to load tasks. Please refresh.');
-            setLoading(false);
+            setError('Unable to load tasks. Please try again.');
+        } finally {
+            setTasksLoading(false);
         }
     };
 
-    const handleCreate = async (e) => {
-        e.preventDefault();
+    const fetchStats = async () => {
+        if (user?.role !== 'admin') return;
+        setStatsLoading(true);
+        try {
+            const response = await API.get('/admin/stats');
+            setStats(response.data.data);
+        } catch {
+            setError('Unable to load dashboard metrics.');
+        } finally {
+            setStatsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        document.documentElement.dataset.theme = theme;
+        localStorage.setItem('accesscore-theme', theme);
+    }, [theme]);
+
+    useEffect(() => {
+        fetchTasks();
+        fetchStats();
+    }, [user?.role]);
+
+    const taskStats = useMemo(() => ({
+        totalTasks: tasks.length,
+        completedTasks: tasks.filter((task) => task.status === 'completed').length,
+        pendingTasks: tasks.filter((task) => task.status !== 'completed').length,
+    }), [tasks]);
+
+    const dashboardStats = user?.role === 'admin'
+        ? (stats || { totalUsers: 0, totalAdmins: 0, totalTasks: 0, completedTasks: 0, pendingTasks: 0 })
+        : taskStats;
+
+    const navItems = [
+        { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+        { id: 'tasks', icon: ListTodo, label: 'Tasks' },
+        ...(user?.role === 'admin' ? [{ id: 'team', icon: Users, label: 'Team Members' }] : []),
+        { id: 'settings', icon: SettingsIcon, label: 'Settings' },
+    ];
+
+    const selectTab = (tab) => {
+        setActiveTab(tab);
+        setMobileNavOpen(false);
+        setError('');
+    };
+
+    const toggleTheme = () => setTheme((current) => current === 'dark' ? 'light' : 'dark');
+
+    const handleCreate = async (event) => {
+        event.preventDefault();
         if (!newTitle.trim()) return;
         setIsCreating(true);
         setError('');
         try {
-            const res = await API.post('/tasks', { title: newTitle.trim(), description: newDesc.trim() });
-            setTasks([res.data.data, ...tasks]);
+            const response = await API.post('/tasks', {
+                title: newTitle.trim(),
+                description: newDesc.trim(),
+            });
+            setTasks((current) => [response.data.data, ...current]);
             setNewTitle('');
             setNewDesc('');
+            await fetchStats();
         } catch {
-            setError('Failed to create task. Please try again.');
+            setError('Unable to create task. Please try again.');
+        } finally {
+            setIsCreating(false);
         }
-        setIsCreating(false);
     };
 
     const handleUpdate = async (id, updatedData) => {
         try {
-            const res = await API.put(`/tasks/${id}`, updatedData);
-            setTasks(tasks.map(t => t.id === id ? res.data.data : t));
+            const response = await API.put(`/tasks/${id}`, updatedData);
+            setTasks((current) => current.map((task) => task.id === id ? response.data.data : task));
+            await fetchStats();
             return true;
         } catch {
-            setError('Failed to update task.');
+            setError('Unable to update task.');
             return false;
         }
     };
@@ -62,225 +124,109 @@ const Dashboard = () => {
     const handleDelete = async (id) => {
         try {
             await API.delete(`/tasks/${id}`);
-            setTasks(tasks.filter(t => t.id !== id));
+            setTasks((current) => current.filter((task) => task.id !== id));
+            await fetchStats();
         } catch {
-            setError('Failed to delete task.');
+            setError('Unable to delete task.');
         }
     };
 
-    const completedCount = tasks.filter(t => t.status === 'completed').length;
-    const pendingCount = tasks.filter(t => t.status !== 'completed').length;
-
-    const navItems = [
-        { id: 'tasks', icon: LayoutDashboard, label: 'Dashboard' },
-        { id: 'team', icon: Users, label: 'Team Members' },
-        { id: 'settings', icon: Settings, label: 'Settings' },
-    ];
-
     return (
-        <div style={{ display: 'flex', minHeight: '100vh' }}>
+        <div className={`app-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
             <MeshBg />
-
-            {/* SIDEBAR */}
-            <aside className="sidebar">
-                {/* Logo */}
+            <aside className={`sidebar ${mobileNavOpen ? 'mobile-open' : ''}`}>
                 <div className="sidebar-logo">
-                    <div className="sidebar-logo-icon">
-                        <ListTodo size={20} color="white" />
-                    </div>
-                    <div>
-                        <div className="sidebar-logo-text">AccessCore</div>
-                        <div className="sidebar-logo-sub">System Active</div>
-                    </div>
+                    <div className="sidebar-logo-icon"><Shield size={20} color="white" /></div>
+                    {!sidebarCollapsed && <div><div className="sidebar-logo-text">AccessCore</div><div className="sidebar-logo-sub">Control center</div></div>}
                 </div>
-
-                {/* Navigation */}
-                <nav className="sidebar-nav">
+                <nav className="sidebar-nav" aria-label="Main navigation">
+                    <div className="nav-section-label">Workspace</div>
                     {navItems.map((item) => (
-                        <button
-                            key={item.id}
-                            onClick={() => setActiveTab(item.id)}
-                            className={`nav-btn ${activeTab === item.id ? 'active' : ''}`}
-                        >
-                            <item.icon size={17} />
-                            {item.label}
+                        <button key={item.id} onClick={() => selectTab(item.id)} className={`nav-btn ${activeTab === item.id ? 'active' : ''}`} title={sidebarCollapsed ? item.label : undefined}>
+                            <item.icon size={17} /><span>{item.label}</span>
                         </button>
                     ))}
                 </nav>
-
-                {/* User Footer */}
-                <div className="sidebar-footer" style={{ marginTop: 'auto' }}>
-                    <div className="sidebar-avatar">
-                        {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                    </div>
-                    <div className="sidebar-user-info min-w-0">
-                        <div className="sidebar-user-name truncate">{user?.name}</div>
-                        <div className="sidebar-user-role">{user?.role || 'user'}</div>
-                    </div>
-                    <button onClick={logout} className="logout-btn" title="Log out">
-                        <LogOut size={17} />
-                    </button>
+                <div className="sidebar-footer">
+                    <div className="sidebar-avatar">{user?.name?.charAt(0)?.toUpperCase() || 'U'}</div>
+                    {!sidebarCollapsed && <div className="sidebar-user-info min-w-0"><div className="sidebar-user-name truncate">{user?.name}</div><div className="sidebar-user-role">{user?.role || 'user'}</div></div>}
+                    <button onClick={logout} className="logout-btn" title="Log out" aria-label="Log out"><LogOut size={17} /></button>
                 </div>
             </aside>
 
-            {/* MAIN CONTENT */}
             <main className="main-content">
-                {/* Page Header */}
-                <div className="page-header">
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div>
-                            <h2 className="page-title">
-                                {activeTab === 'tasks' ? 'Dashboard' : activeTab === 'team' ? 'Team Members' : 'Settings'}
-                            </h2>
-                            <p className="page-subtitle">
-                                {activeTab === 'tasks'
-                                    ? `${tasks.length} task${tasks.length !== 1 ? 's' : ''} total`
-                                    : 'Coming soon'}
-                            </p>
-                        </div>
-                        <button
-                            onClick={logout}
-                            style={{ display: 'none' }}
-                            className="btn btn-secondary"
-                        >
-                            <LogOut size={16} />
-                            Sign Out
-                        </button>
+                <header className="topbar">
+                    <button className="mobile-menu-btn" onClick={() => setMobileNavOpen((open) => !open)} aria-label="Open navigation"><Menu size={20} /></button>
+                    <div className="breadcrumb"><span>Workspace</span><ChevronRight size={14} /><strong>{activeTab === 'dashboard' ? 'Overview' : navItems.find((item) => item.id === activeTab)?.label}</strong></div>
+                    <div className="topbar-actions">
+                        <button className="theme-toggle" onClick={toggleTheme} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`} aria-label="Toggle theme">{theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}</button>
+                        <div className="topbar-user"><div className="topbar-user-avatar">{user?.name?.charAt(0)?.toUpperCase() || 'U'}</div><div><strong>{user?.name}</strong><span>{user?.role || 'user'}</span></div></div>
                     </div>
+                </header>
+
+                <div className="page-header dashboard-page-header">
+                    <div><div className="eyebrow">AccessCore workspace</div><h1 className="page-title">{activeTab === 'dashboard' ? `Good to see you, ${user?.name?.split(' ')[0] || 'there'}` : navItems.find((item) => item.id === activeTab)?.label}</h1><p className="page-subtitle">{activeTab === 'dashboard' ? 'Here is what is happening across your workspace today.' : activeTab === 'tasks' ? 'Create, track, and organize your work.' : activeTab === 'team' ? 'Manage workspace access and roles.' : 'Manage your account and security.'}</p></div>
+                    <button className="sidebar-collapse-btn" onClick={() => setSidebarCollapsed((collapsed) => !collapsed)} title="Toggle sidebar" aria-label="Toggle sidebar">{sidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}</button>
                 </div>
 
-                {/* Error Banner */}
-                {error && (
-                    <div className="alert alert-error" style={{ marginBottom: '1.5rem' }}>
-                        <AlertCircle size={15} />
-                        {error}
-                        <button
-                            onClick={() => setError('')}
-                            style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#fca5a5' }}
-                        >
-                            ✕
-                        </button>
-                    </div>
+                {error && <div className="alert alert-error"><AlertCircle size={15} />{error}<button className="alert-dismiss" onClick={() => setError('')} aria-label="Dismiss error"><X size={15} /></button></div>}
+
+                {activeTab === 'dashboard' && (
+                    <DashboardOverview stats={dashboardStats} loading={statsLoading || tasksLoading} isAdmin={user?.role === 'admin'} tasks={tasks} onViewTasks={() => selectTab('tasks')} onRetry={() => { fetchTasks(); fetchStats(); }} />
                 )}
-
-                {activeTab === 'tasks' ? (
-                    <div className="dashboard-grid">
-                        {/* LEFT COLUMN */}
-                        <div>
-                            {/* Stats */}
-                            <div className="stats-grid" style={{ marginBottom: '1.5rem' }}>
-                                <div className="stat-card">
-                                    <div className="stat-label">
-                                        <Clock size={13} style={{ color: '#60a5fa' }} />
-                                        Pending
-                                    </div>
-                                    <div className="stat-value" style={{ color: '#60a5fa' }}>{pendingCount}</div>
-                                </div>
-                                <div className="stat-card">
-                                    <div className="stat-label">
-                                        <CheckCircle2 size={13} style={{ color: '#34d399' }} />
-                                        Done
-                                    </div>
-                                    <div className="stat-value" style={{ color: '#34d399' }}>{completedCount}</div>
-                                </div>
-                            </div>
-
-                            {/* Create Task */}
-                            <div className="card nohover create-section">
-                                <h3>
-                                    <Plus size={16} style={{ color: '#60a5fa' }} />
-                                    Create New Task
-                                </h3>
-                                <form onSubmit={handleCreate}>
-                                    <div className="form-group">
-                                        <label className="form-label">Task Title *</label>
-                                        <input
-                                            type="text"
-                                            className="form-input"
-                                            placeholder="Enter task title..."
-                                            value={newTitle}
-                                            onChange={(e) => setNewTitle(e.target.value)}
-                                            required
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label">Description</label>
-                                        <textarea
-                                            className="form-textarea"
-                                            placeholder="Optional description..."
-                                            value={newDesc}
-                                            onChange={(e) => setNewDesc(e.target.value)}
-                                        />
-                                    </div>
-                                    <button
-                                        type="submit"
-                                        disabled={isCreating || !newTitle.trim()}
-                                        className="btn btn-primary btn-full"
-                                    >
-                                        {isCreating ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-                                        {isCreating ? 'Adding...' : 'Add Task'}
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-
-                        {/* RIGHT COLUMN - TASK LIST */}
-                        <div>
-                            <div className="task-section-header">
-                                <h3 className="task-section-title">Task List</h3>
-                                {tasks.length > 0 && (
-                                    <span className="task-count-badge">{tasks.length} task{tasks.length !== 1 ? 's' : ''}</span>
-                                )}
-                            </div>
-
-                            {loading ? (
-                                <div className="spinner">
-                                    <div className="spinner-circle" />
-                                    <span className="spinner-text">Loading tasks...</span>
-                                </div>
-                            ) : tasks.length === 0 ? (
-                                <div className="empty-state">
-                                    <div className="empty-state-icon">
-                                        <CheckCircle2 size={28} style={{ color: '#334155' }} />
-                                    </div>
-                                    <div className="empty-state-title">No Tasks Yet</div>
-                                    <div className="empty-state-sub">Create your first task using the form on the left to get started.</div>
-                                </div>
-                            ) : (
-                                <div className="task-list">
-                                    {tasks.map(task => (
-                                        <TaskItem
-                                            key={task.id}
-                                            task={task}
-                                            onUpdate={handleUpdate}
-                                            onDelete={handleDelete}
-                                        />
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                ) : (
-                    <div style={{ textAlign: 'center', padding: '5rem 2rem' }}>
-                        <div style={{
-                            width: 70, height: 70,
-                            background: 'rgba(15,23,42,0.8)',
-                            border: '1px solid rgba(255,255,255,0.08)',
-                            borderRadius: '20px',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            margin: '0 auto 1.5rem',
-                        }}>
-                            <Settings size={28} style={{ color: '#334155' }} />
-                        </div>
-                        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'white', marginBottom: '0.5rem' }}>
-                            Coming Soon
-                        </h2>
-                        <p style={{ color: '#64748b', fontSize: '0.9rem' }}>This section is under development.</p>
-                    </div>
+                {activeTab === 'tasks' && (
+                    <TaskWorkspace tasks={tasks} loading={tasksLoading} newTitle={newTitle} newDesc={newDesc} isCreating={isCreating} onTitleChange={setNewTitle} onDescChange={setNewDesc} onCreate={handleCreate} onUpdate={handleUpdate} onDelete={handleDelete} />
                 )}
+                {activeTab === 'team' && <TeamMembers currentUser={user} />}
+                {activeTab === 'settings' && <SettingsPage currentUser={user} onUserUpdated={updateUser} />}
             </main>
         </div>
     );
 };
+
+const DashboardOverview = ({ stats, loading, isAdmin, tasks, onViewTasks, onRetry }) => {
+    const cards = isAdmin
+        ? [
+            { label: 'Total members', value: stats.totalUsers, icon: Users, tone: 'blue' },
+            { label: 'Administrators', value: stats.totalAdmins, icon: Shield, tone: 'violet' },
+            { label: 'Total tasks', value: stats.totalTasks, icon: ListTodo, tone: 'amber' },
+            { label: 'Completed tasks', value: stats.completedTasks, icon: CheckCircle2, tone: 'green' },
+        ]
+        : [
+            { label: 'Your tasks', value: stats.totalTasks, icon: ListTodo, tone: 'blue' },
+            { label: 'Completed', value: stats.completedTasks, icon: CheckCircle2, tone: 'green' },
+            { label: 'In progress', value: stats.pendingTasks, icon: Clock, tone: 'amber' },
+        ];
+
+    return (
+        <section className="overview-page">
+            <div className={`overview-stats ${isAdmin ? 'four-columns' : ''}`}>
+                {cards.map((card) => <Card key={card.label} noHover className="overview-stat"><div className={`overview-stat-icon ${card.tone}`}><card.icon size={18} /></div><div><div className="overview-stat-label">{card.label}</div><div className="overview-stat-value">{loading ? <span className="skeleton-number" /> : card.value}</div></div></Card>)}
+            </div>
+            <div className="overview-grid">
+                <Card noHover className="overview-panel">
+                    <div className="panel-heading"><div><h2>Task completion</h2><p>Current workspace progress</p></div><BarChart3 size={20} /></div>
+                    {loading ? <div className="overview-loading"><span className="skeleton-line wide" /><span className="skeleton-line" /></div> : <div className="completion-visual"><div className="completion-ring" style={{ '--completion': `${stats.totalTasks ? Math.round((stats.completedTasks / stats.totalTasks) * 100) : 0}%` }}><strong>{stats.totalTasks ? Math.round((stats.completedTasks / stats.totalTasks) * 100) : 0}%</strong><span>complete</span></div><div className="completion-legend"><div><span className="legend-dot green" />Completed<strong>{stats.completedTasks}</strong></div><div><span className="legend-dot amber" />Open<strong>{stats.pendingTasks}</strong></div></div></div>}
+                </Card>
+                <Card noHover className="overview-panel">
+                    <div className="panel-heading"><div><h2>Recent tasks</h2><p>{tasks.length ? 'Your latest workspace activity' : 'No activity yet'}</p></div><button className="panel-link" onClick={onViewTasks}>View all <ChevronRight size={14} /></button></div>
+                    {tasks.length ? <div className="recent-task-list">{tasks.slice(0, 4).map((task) => <div className="recent-task" key={task.id}><div className={`recent-task-status ${task.status === 'completed' ? 'complete' : ''}`} /> <div className="min-w-0"><strong className="truncate">{task.title}</strong><span>{task.status === 'completed' ? 'Completed' : 'In progress'}</span></div></div>)}</div> : <div className="honest-empty"><ListTodo size={22} /><span>Create a task to see activity here.</span></div>}
+                </Card>
+            </div>
+            {isAdmin && <div className="overview-note"><Shield size={16} /><span>Administrator view includes organization-wide metrics. User dashboards only show their own task data.</span></div>}
+            {!loading && !stats && <Button variant="secondary" icon={RefreshCw} onClick={onRetry}>Retry metrics</Button>}
+        </section>
+    );
+};
+
+const TaskWorkspace = ({ tasks, loading, newTitle, newDesc, isCreating, onTitleChange, onDescChange, onCreate, onUpdate, onDelete }) => (
+    <div className="task-workspace">
+        <div className="task-create-card card nohover">
+            <div className="panel-heading"><div><h2>Create a task</h2><p>Capture the next piece of work for your workspace.</p></div><Plus size={20} /></div>
+            <form onSubmit={onCreate}><div className="form-group"><label className="form-label" htmlFor="task-title">Task title</label><input id="task-title" className="form-input" placeholder="e.g. Review access policy" value={newTitle} onChange={(event) => onTitleChange(event.target.value)} required /></div><div className="form-group"><label className="form-label" htmlFor="task-description">Description</label><textarea id="task-description" className="form-textarea" placeholder="Add useful context..." value={newDesc} onChange={(event) => onDescChange(event.target.value)} /></div><Button type="submit" disabled={isCreating || !newTitle.trim()} icon={Plus}>{isCreating ? 'Creating...' : 'Create task'}</Button></form>
+        </div>
+        <div className="task-list-panel"><div className="panel-heading"><div><h2>Tasks</h2><p>{tasks.length} task{tasks.length !== 1 ? 's' : ''} in view</p></div><Badge variant="blue">{tasks.filter((task) => task.status === 'completed').length} complete</Badge></div>{loading ? <div className="spinner"><div className="spinner-circle" /><span className="spinner-text">Loading tasks...</span></div> : tasks.length === 0 ? <div className="honest-empty large"><ListTodo size={28} /><strong>No tasks yet</strong><span>Create your first task to get started.</span></div> : <div className="task-list">{tasks.map((task) => <TaskItem key={task.id} task={task} onUpdate={onUpdate} onDelete={onDelete} />)}</div>}</div>
+    </div>
+);
 
 export default Dashboard;

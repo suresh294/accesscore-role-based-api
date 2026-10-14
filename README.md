@@ -60,6 +60,8 @@ Create a PostgreSQL database, then create a `backend/.env` file using the enviro
 | `DB_NAME` | Database name |
 | `JWT_SECRET` | Secret used to sign tokens |
 | `JWT_EXPIRE` | Token lifetime |
+| `ADMIN_EMAIL` | Email used by the explicit administrator initializer |
+| `ADMIN_PASSWORD` | Password used only when the administrator account is first created |
 
 Use a unique, randomly generated JWT secret and keep `.env` files out of version control. Never paste production credentials into issues, screenshots, or documentation.
 
@@ -71,6 +73,34 @@ npm install
 node src/models/run-schema.js
 npm start
 ```
+
+To initialize a default administrator locally, set `ADMIN_EMAIL` and
+`ADMIN_PASSWORD` in `backend/.env`, then run this explicit command after the
+database schema exists:
+
+```bash
+cd backend
+npm run init:admin
+```
+
+The command is idempotent. If the configured email does not exist, it creates
+an `admin` account with a bcrypt password hash. If the account already exists,
+it only ensures the role is `admin` and does not overwrite the existing
+password. Change an existing administrator password through the authenticated
+Settings page instead of rerunning initialization with a new password.
+
+For Render, add `ADMIN_EMAIL` and `ADMIN_PASSWORD` under the backend service's
+Environment settings. Do not add them to Vercel. Render does not run this
+initializer automatically unless its service configuration explicitly invokes
+`npm run init:admin`; review that change before enabling it. The safer
+production procedure is to run the command once through an approved Render
+shell/job using the production environment, then remove or rotate the
+initializer password variable according to your secret-management policy.
+
+Normal public registration always creates a `user` role. Administrator role
+checks are performed from the current database record by the JWT middleware,
+so role changes take effect on subsequent requests even if an older token
+contains a different role claim.
 
 ### 3. Start the frontend
 

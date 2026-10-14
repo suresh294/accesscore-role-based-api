@@ -1,6 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const { getSystemStats } = require('../../controllers/adminController');
+const {
+    getAdminMembers,
+    updateMemberRole,
+    deleteMember,
+} = require('../../controllers/userController');
 const { protect, authorize } = require('../../middlewares/authMiddleware');
 
 /**
@@ -29,5 +34,8 @@ router.use(authorize('admin'));
  *         description: Not authorized
  */
 router.get('/stats', getSystemStats);
+router.get('/members', getAdminMembers);
+router.patch('/members/:id', updateMemberRole);
+router.delete('/members/:id', deleteMember);
 
 module.exports = router;

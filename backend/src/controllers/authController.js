@@ -7,7 +7,7 @@ const userService = require('../services/userService');
 const registerUser = asyncHandler(async (req, res) => {
     const { name, email, password } = req.body;
 
-    if (!name || !email || !password) {
+    if (typeof name !== 'string' || !name.trim() || typeof email !== 'string' || !email.trim() || !password) {
         res.status(400);
         throw new Error('Please provide name, email, and password');
     }
@@ -24,7 +24,8 @@ const registerUser = asyncHandler(async (req, res) => {
         throw new Error('Password must be at least 6 characters long');
     }
 
-    const user = await userService.registerUser({ name, email, password });
+    const normalizedEmail = userService.normalizeEmail(email);
+    const user = await userService.registerUser({ name: name.trim(), email: normalizedEmail, password });
 
     res.status(201).json({
         success: true,
@@ -50,7 +51,7 @@ const loginUser = asyncHandler(async (req, res) => {
         throw new Error('Please provide email and password');
     }
 
-    const user = await userService.loginUser(email, password);
+    const user = await userService.loginUser(userService.normalizeEmail(email), password);
 
     res.status(200).json({
         success: true,
