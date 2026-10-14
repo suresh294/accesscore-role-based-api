@@ -76,7 +76,7 @@ const Dashboard = () => {
     const navItems = [
         { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
         { id: 'tasks', icon: ListTodo, label: 'Tasks' },
-        ...(user?.role === 'admin' ? [{ id: 'team', icon: Users, label: 'Team Members' }] : []),
+        { id: 'team', icon: Users, label: 'Team Members' },
         { id: 'settings', icon: SettingsIcon, label: 'Settings' },
     ];
 
