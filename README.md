@@ -4,7 +4,11 @@
 
 AccessCore is a full-stack task-management application built to demonstrate REST API development, JWT authentication, role-based access control, and PostgreSQL integration. It includes a React/Vite frontend and an Express backend with Swagger API documentation.
 
-> **Demo status:** A verified public deployment URL has not been confirmed yet. Use the local setup below to run the project.
+## Live Demo
+
+- **Frontend:** [AccessCore Dashboard](https://accesscore-role-based-api.vercel.app/dashboard)
+- **Backend API:** [AccessCore on Render](https://accesscore.onrender.com)
+- **API Documentation:** [Swagger UI](https://accesscore.onrender.com/api-docs)
 
 ## Features
 
@@ -21,8 +25,10 @@ AccessCore is a full-stack task-management application built to demonstrate REST
 | Area | Technology |
 |---|---|
 | Frontend | React, Vite, Framer Motion, Lucide Icons |
+| Frontend hosting | Vercel |
 | Backend | Node.js, Express.js |
-| Database | PostgreSQL |
+| Backend hosting | Render |
+| Database | PostgreSQL (Neon) |
 | Authentication | JWT, bcryptjs |
 | API documentation | Swagger / OpenAPI |
 | Security middleware | Helmet, CORS |
