@@ -12,11 +12,15 @@ const options = {
             },
         },
         servers: [
-            {
-                url: 'http://localhost:5000',
-                description: 'Development server',
-            },
-        ],
+  {
+    url: 'https://accesscore.onrender.com',
+    description: 'Production server',
+  },
+  {
+    url: 'http://localhost:5000',
+    description: 'Development server',
+  },
+],
         components: {
             securitySchemes: {
                 BearerAuth: {
